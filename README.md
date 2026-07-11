@@ -1,3 +1,3 @@
 # A-Maze-ing
-E5weteee l project lsa7 ane w 5ayye 3ala2
+*This project has been created as part of the 42 curriculum by <login>, <aalkhati>.*
 
