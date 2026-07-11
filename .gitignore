@@ -1,0 +1,4 @@
+__pycache__/
+.mypy_cache/
+maze.txt
+validator_out.txt
