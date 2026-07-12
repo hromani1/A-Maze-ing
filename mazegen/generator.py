@@ -86,11 +86,36 @@ class MazeGenerator():
                 unvisited.append((nx, ny, direction))
         return unvisited
 
+    def stamp_pattern(self, visited: list[list[bool]]) -> None:
+        """This function marks the 42 logo visited"""
+        has_42 = (self.width >= 9 and self.height >= 7)
+        if not has_42:
+            print("Too small for '42' logo")
+            return
+        bitmap = ["1.1 111", "1.1 ..1", "111 111", "..1 1..", "..1 111"]
+        offset_x = (self.width - 7) // 2
+        offset_y = (self.height - 5) // 2
+        for i, row in enumerate(bitmap):
+            for j, column in enumerate(row):
+                if bitmap[i][j] == "1":
+                    visited[offset_y + i][offset_x + j] = True
+
+    def check_endpoints(self, visited: list[list[bool]]) -> bool:
+        """Checks if entry and exit are in the logo or not"""
+        en = self.entry
+        ex = self.exit_
+        valid_en: bool = visited[en[1]][en[0]]
+        valid_ex: bool = visited[ex[1]][ex[0]]
+        return valid_en or valid_ex
+
     def generate(self) -> None:
         """Generates a maze from the grid"""
         visited: list[list[bool]] = [[False] * self.width
                                      for _ in range(self.height)]
         stack: list[tuple[int, int]] = []
+        self.stamp_pattern(visited)
+        if self.check_endpoints(visited):
+            raise MazeError("Entry and exit can't be inside pattern")
         self.push_s(self.entry, stack, visited)
         while stack:
             neighbors = self.get_v_neighbors(stack[-1], visited)
@@ -154,16 +179,25 @@ class MazeGenerator():
         raise MazeError("No solution found! Check if the maze is generated.")
 
 
-# if __name__ == "__main__":
-#     gen = MazeGenerator(10, 10, (0, 0), (9, 7), True, 42)
-#     gen2 = MazeGenerator(10, 10, (0, 0), (9, 7), True, 42)
-#     gen.generate()
-#     print("1st maze")
-#     hex_grid = [[f"{num:X}" for num in sublist] for sublist in gen.grid]
-#     print(*hex_grid, sep="\n")
-#     print(gen.solve())
-#     print("2nd maze")
-#     gen2.generate()
-#     hex_grid2 = [[f"{num:X}" for num in sublist] for sublist in gen2.grid]
-#     print(*hex_grid2, sep="\n")
-#     print(gen2.solve())
+if __name__ == "__main__":
+    gen = MazeGenerator(20, 15, (0, 0), (9, 7), True, 42)
+    gen3 = MazeGenerator(10, 7, (0, 0), (1, 1), True, 42)
+    gen2 = MazeGenerator(5, 5, (0, 0), (4, 3), True, 42)
+    gen.generate()
+    print("1st maze")
+    hex_grid = [[f"{num:X}" for num in sublist] for sublist in gen.grid]
+    print(*hex_grid, sep="\n")
+    print(gen.solve())
+    print("2nd maze")
+    gen2.generate()
+    hex_grid2 = [[f"{num:X}" for num in sublist] for sublist in gen2.grid]
+    print(*hex_grid2, sep="\n")
+    print(gen2.solve())
+    print("3rd maze")
+    try:
+        gen3.generate()
+        hex_grid3 = [[f"{num:X}" for num in sublist] for sublist in gen3.grid]
+        print(*hex_grid3, sep="\n")
+        print(gen3.solve())
+    except MazeError as e:
+        print(e)
