@@ -67,6 +67,15 @@ class MazeGenerator():
         nx, ny = dx + x, dy + y
         self.grid[ny][nx] &= ~(1 << direction.opposite)
 
+    def build(self, x: int, y: int, direction: Direction) -> None:
+        """Builds the given wall in the given cell and its adjacent"""
+        if not self.valid_bound(x, y, direction):
+            raise ValueError("Out of bounds")
+        self.grid[y][x] |= (1 << direction)
+        dx, dy = direction.delta
+        nx, ny = dx + x, dy + y
+        self.grid[ny][nx] |= (1 << direction.opposite)
+
     def push_s(self, cell: tuple[int, int],
                stack: list[tuple[int, int]],
                visited: list[list[bool]]) -> None:
@@ -108,6 +117,66 @@ class MazeGenerator():
         valid_ex: bool = visited[ex[1]][ex[0]]
         return valid_en or valid_ex
 
+    def is_open_cell(self, cell: tuple[int, int]) -> bool:
+        """Checks if there is an open 3x3 block starting from the given cell"""
+        x, y = cell[0], cell[1]
+        if x + 2 >= self.width or y + 2 >= self.height:
+            return False
+        for i in range(3):
+            vert = self.grid[y + i][x + 1]
+            if vert & (1 << Direction.EAST) | vert & (1 << Direction.WEST):
+                return False
+        for i in range(3):
+            hori = self.grid[y + 1][x + i]
+            if hori & (1 << Direction.NORTH) | hori & (1 << Direction.SOUTH):
+                return False
+        return True
+
+    def is_open_block(self, cell: tuple[int, int]) -> bool:
+        """Checks if the given cell is in any open 3x3 block"""
+        x, y = cell[0], cell[1]
+        for i in range(3):
+            for j in range(3):
+                if y - i >= 0 and x - j >= 0:
+                    if self.is_open_cell((x - j, y - i)):
+                        return True
+        return False
+
+    def get_candidates(self) -> list[tuple[tuple[int, int], Direction]]:
+        """Gets the candidate walls to be carved"""
+        candidates: list[tuple[tuple[int, int], Direction]] = []
+        for i in range(self.height):
+            for j in range(self.width):
+                curr = self.grid[i][j]
+                valid = self.valid_bound(j, i, Direction.EAST)
+                if j + 1 < self.width and i + 1 < self.height:
+                    ptrn_x = curr != 15 and self.grid[i][j + 1] != 15
+                    ptrn_y = curr != 15 and self.grid[i + 1][j] != 15
+                else:
+                    ptrn_x = curr != 15
+                    ptrn_y = curr != 15
+                if valid and ptrn_x and curr & (1 << Direction.EAST):
+                    candidates.append(((j, i), Direction.EAST))
+                valid = self.valid_bound(j, i, Direction.SOUTH)
+                if valid and ptrn_y and curr & (1 << Direction.SOUTH):
+                    candidates.append(((j, i), Direction.SOUTH))
+        return candidates
+
+    def braid(self) -> None:
+        """Makes the maze imperfect"""
+        candidates = self.get_candidates()
+        self._rng.shuffle(candidates)
+        nb: int = max(1, (self.width * self.height) // 15)
+        for cdd in candidates:
+            if nb > 0:
+                self.carve(cdd[0][0], cdd[0][1], cdd[1])
+                if self.is_open_block(cdd[0]):
+                    self.build(cdd[0][0], cdd[0][1], cdd[1])
+                else:
+                    nb -= 1
+            else:
+                break
+
     def generate(self) -> None:
         """Generates a maze from the grid"""
         visited: list[list[bool]] = [[False] * self.width
@@ -125,6 +194,8 @@ class MazeGenerator():
                 self.push_s((chosen_cell[0], chosen_cell[1]), stack, visited)
             else:
                 stack.pop()
+        if not self.perfect:
+            self.braid()
 
     def get_o_neighbors(self, cell: tuple[int, int], visited:
                         list[list[bool]]) -> list[tuple[int, int, Direction]]:
@@ -180,9 +251,9 @@ class MazeGenerator():
 
 
 if __name__ == "__main__":
-    gen = MazeGenerator(20, 15, (0, 0), (9, 7), True, 42)
-    gen3 = MazeGenerator(10, 7, (0, 0), (1, 1), True, 42)
-    gen2 = MazeGenerator(5, 5, (0, 0), (4, 3), True, 42)
+    gen = MazeGenerator(20, 15, (0, 0), (9, 7), False, 42)
+    gen2 = MazeGenerator(20, 15, (0, 0), (9, 7), False, 42)
+    gen3 = MazeGenerator(20, 15, (0, 0), (9, 7), True, 42)
     gen.generate()
     print("1st maze")
     hex_grid = [[f"{num:X}" for num in sublist] for sublist in gen.grid]
@@ -201,3 +272,24 @@ if __name__ == "__main__":
         print(gen3.solve())
     except MazeError as e:
         print(e)
+    for y in range(gen.height):
+        for x in range(gen.width):
+            assert not gen.is_open_cell((x, y)), f"open 3x3 at ({x},{y})"
+    print("No open 3x3 blocks: OK")
+
+    # A2: pattern intact after braiding
+    bitmap = ["1.1 111", "1.1 ..1", "111 111", "..1 1..", "..1 111"]
+    off_x = (gen.width - 7) // 2
+    off_y = (gen.height - 5) // 2
+    for i, row in enumerate(bitmap):
+        for j, ch in enumerate(row):
+            if ch == "1":
+                assert gen.grid[off_y + i][off_x + j] == 15, \
+                    f"pattern cell broken at ({off_x + j},{off_y + i})"
+    print("42 intact: OK")
+
+    # A4: wall counts, perfect vs imperfect
+    walls_imp = sum(bin(c).count("1") for row in gen.grid for c in row)
+    walls_per = sum(bin(c).count("1") for row in gen3.grid for c in row)
+    print(f"Walls perfect={walls_per}, imperfect={walls_imp}")
+    assert walls_imp < walls_per
