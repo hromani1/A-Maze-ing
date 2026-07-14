@@ -7,6 +7,7 @@ Assumes a coherent grid with sealed borders (North+West canonical form).
 Border walls are drawn unconditionally; the renderer trusts the generator
 never produces open borders.
 """
+
 import re
 
 
@@ -17,7 +18,10 @@ YELLOW = "\033[33m"
 BLUE = "\033[34m"
 MAGENTA = "\033[35m"
 CYAN = "\033[36m"
+WHITE = "\033[37m"
 BOLD = "\033[1m"
+
+
 _ANSI_ESCAPE = re.compile(r"\033\[[0-9;]*m")
 
 
@@ -26,6 +30,7 @@ def render(
     entry: tuple[int, int],
     exit_: tuple[int, int],
     path: list[str] | None = None,
+    colors: dict[str, str] | None = None,
 ) -> str:
     """Render a maze grid as ASCII art.
 
@@ -44,21 +49,31 @@ def render(
     After the last row, one bottom border line.
 
     Markers:
-        'E' in entry cell interior (cyan)
-        'X' in exit cell interior  (red)
-        '*' in path cells          (yellow)
+        'E' in entry cell interior (cyan by default)
+        'X' in exit cell interior  (red by default)
+        '*' in path cells          (yellow by default)
+
+    Wall colors are controlled by the colors dict "wall" key.
 
     Args:
         grid: 2-D list of wall bitmasks, grid[y][x].
         entry: (x, y) coordinates of the entry cell.
         exit_: (x, y) coordinates of the exit cell.
         path: Optional list of directions ('N','S','E','W') from entry.
+        colors: Optional dict with keys "entry", "exit", "path", "wall"
+            mapping to ANSI color codes. Defaults to cyan/red/yellow/white.
 
     Returns:
         Multi-line string representing the rendered maze.
     """
+    if colors is None:
+        colors = {
+            "entry": CYAN, "exit": RED, "path": YELLOW, "wall": WHITE,
+        }
+
     if not grid or not grid[0]:
         return ""
+
     height = len(grid)
     width = len(grid[0])
 
@@ -72,40 +87,47 @@ def render(
             cx += dx
             cy += dy
             path_cells.add((cx, cy))
+
     lines: list[str] = []
+    wall = colors.get("wall", WHITE)
 
     for y in range(height):
-        # Build TOP line for this row
+
         top = ""
         for x in range(width):
-            top += "+"
+            top += f"{wall}+{RESET}"
             if grid[y][x] & 1:
-                top += "--"
+                top += f"{wall}--{RESET}"
             else:
                 top += "  "
-        top += "+"
+        top += f"{wall}+{RESET}"
         lines.append(top)
+
         side = ""
         for x in range(width):
             if grid[y][x] & 8:
-                side += "|"
+                side += f"{wall}|{RESET}"
             else:
                 side += " "
-            # Interior marker
+
             if (x, y) == entry:
-                side += f"{CYAN}E {RESET}"
+                side += f"{colors['entry']}E {RESET}"
             elif (x, y) == exit_:
-                side += f"{RED}X {RESET}"
+                side += f"{colors['exit']}X {RESET}"
             elif path is not None and (x, y) in path_cells:
-                side += f"{YELLOW}* {RESET}"
+                side += f"{colors['path']}* {RESET}"
             else:
                 side += "  "
-        side += "|"
+
+        # East border (orphan wall)
+        side += f"{wall}|{RESET}"
         lines.append(side)
+
+    # bottom border (orphan walls)
     bottom = ""
     for _ in range(width):
-        bottom += "+--"
-    bottom += "+"
+        bottom += f"{wall}+--{RESET}"
+    bottom += f"{wall}+{RESET}"
     lines.append(bottom)
 
     return "\n".join(lines)
@@ -116,7 +138,11 @@ def render_plain(
     entry: tuple[int, int],
     exit_: tuple[int, int],
     path: list[str] | None = None,
+    colors: dict[str, str] | None = None,
 ) -> str:
-    """Same as render() but without ANSI colour codes."""
-    colored = render(grid, entry, exit_, path)
+    """Same as render() but without ANSI color codes.
+
+    Useful for piping to files or when color support is unknown.
+    """
+    colored = render(grid, entry, exit_, path, colors)
     return _ANSI_ESCAPE.sub("", colored)
