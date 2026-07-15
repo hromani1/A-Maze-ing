@@ -1,4 +1,4 @@
-*This project has been created as part of the 42 curriculum by <TODO-your-login>, <TODO-hasan-login>.*
+*This project has been created as part of the 42 curriculum by <aalkhati>, <hromani>.*
 
 # A-Maze-ing
 
@@ -103,8 +103,30 @@ We chose BFS for two reasons:
 2. **Works on imperfect mazes** — Unlike wall-following or DFS, BFS does not rely on the perfect-maze property; it correctly navigates braided mazes with multiple paths.
 
 ## Reusable module
+Generates grid-based mazes with reproducible seeding,
+an embedded '42' wall logo, and optional dead-end braiding.
 
-[TODO — pending Hasan's docstring text for the mazegen package: instantiation example, parameter documentation, structure access, and solution access.]
+Example:
+    gen = MazeGenerator(20, 15, (0, 0), (19, 14), perfect=False, seed=42)
+    gen.generate()
+    gen.solve()
+Attributes:
+    grid: A 2D list of integers representing the wall bitmasks,
+    where bit 0 = NORTH, 1 = EAST, 2 = SOUTH, and 3 = WEST.
+    A set bit (1) means the wall is closed,
+    while a cleared bit (0) means it is carved open.
+    width: The total number of columns in the maze grid.
+    height: The total number of rows in the maze grid.
+    entry: The starting coordinate tuple (x, y) for the maze path.
+    exit_: The ending coordinate tuple (x, y) for the maze path.
+    perfect: A boolean that dictates whether the maze remains a
+    perfect tree (True) or becomes braided (False).
+
+Raises / behavior notes:
+    generate() raises a MazeError if either the entry or
+    exit coordinate overlaps with the coordinates of the stamped '42' logo.
+    If the maze dimensions are too small (width < 9 or height < 7),
+    the '42' logo stamping is skipped and a message is printed.
 
 The generation engine is packaged as `mazegen` and can be built as a standalone Python package (`mazegen-<version>.tar.gz` or `.whl`). The `MazeGenerator` class exposes the grid structure and supports custom dimensions, entry/exit points, perfect/imperfect flags, and seeds.
 
