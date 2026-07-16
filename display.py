@@ -116,6 +116,8 @@ def render(
                 side += f"{colors['exit']}X {RESET}"
             elif path is not None and (x, y) in path_cells:
                 side += f"{colors['path']}* {RESET}"
+            elif grid[y][x] == 15:
+                side += "##"
             else:
                 side += "  "
 

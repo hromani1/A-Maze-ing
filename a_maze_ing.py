@@ -1,5 +1,4 @@
 import sys
-import os
 
 from config_parser import ConfigError, parse_config
 from mazegen.generator import MazeError, MazeGenerator
@@ -45,7 +44,6 @@ def _run_menu(
     ]
 
     while True:
-        os.system("clear" if os.name != "nt" else "cls")
 
         print("\n=== A-Maze-ing ===")
         print("1. Re-generate a new maze")
