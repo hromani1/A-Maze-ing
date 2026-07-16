@@ -99,7 +99,7 @@ def parse_config(path: str) -> Config:
             msg = f"Line {line_no}: missing '=' in: {stripped!r}"
             raise ConfigError(msg)
         key, value = stripped.split("=", 1)
-        key = key.strip()
+        key = key.strip().upper()
         value = value.strip()
         if not key:
             msg = f"Line {line_no}: empty key before '=' in: {stripped!r}"

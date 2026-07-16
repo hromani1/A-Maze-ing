@@ -6,10 +6,10 @@ from display import render, render_plain
 
 def main() -> None:
     gen = MazeGenerator(
-        width=20,
-        height=15,
+        width=5,
+        height=5,
         entry=(0, 0),
-        exit_=(19, 14),
+        exit_=(2, 4),
         perfect=True,
         seed=42,
     )
